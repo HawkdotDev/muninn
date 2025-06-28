@@ -1,0 +1,11 @@
+# Muninn allows manual update checks only — no auto-checks.
+# This config enables update checks via GitHub Releases
+# when the user explicitly clicks "Check for Updates."
+# ─────────────────────────────────────────────────────
+
+autoUpdate: false
+
+provider: github
+owner: HawkdotDev
+repo: muninn
+updaterCacheDirName: muninn-updater

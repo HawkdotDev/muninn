@@ -1,0 +1,58 @@
+appId: com.hawkdotdev.muninn
+productName: muninn
+
+directories:
+  buildResources: build
+
+files:
+  - dist/**                       # Vite build output (renderer)
+  - main.js                       # Electron main process
+  - preload.js                    # Preload script (optional)
+  - resources/**                  # Unpacked native modules or assets
+  - package.json
+  - '!**/.vscode/*'
+  - '!electron.vite.config.*'
+  - '!*.md'
+  - '!.env*'
+  - '!*.lock'
+
+asarUnpack:
+  - resources/**                  # Keep native modules unpacked (e.g., cap.node)
+
+win:
+  executableName: muninn
+
+nsis:
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+
+mac:
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    - NSDocumentsFolderUsageDescription: Muninn may export logs to your Documents folder.
+    - NSDownloadsFolderUsageDescription: Muninn may save files to your Downloads folder.
+  notarize: false
+
+dmg:
+  artifactName: ${name}-${version}.${ext}
+
+linux:
+  target:
+    - AppImage
+    - snap
+    - deb
+  maintainer: HawkdotDev
+  category: Utility
+
+appImage:
+  artifactName: ${name}-${version}.${ext}
+
+npmRebuild: false
+
+publish:
+  provider: generic
+  url: https://hawkdotdev.github.io/muninn/releases

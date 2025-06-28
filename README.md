@@ -12,7 +12,7 @@ It helps you visualise active network connections, monitor traffic, and detect u
 - Manual update checks via GitHub Releases  
 - Cross-platform: **macOS**, **Windows**, **Linux**
 
-## 🧠 Tech Stack
+## Tech Stack
 
 - **React** (UI built with [Vite](https://vitejs.dev/))  
 - **Electron** (cross-platform desktop shell)  

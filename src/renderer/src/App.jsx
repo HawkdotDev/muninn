@@ -1,4 +1,5 @@
 import Header from "./components/Header";
+import LiveGraphs from "./components/pages/LiveGraphs";
 
 function App() {
   const ipcHandle = () => window.electron.ipcRenderer.send("ping");
@@ -6,6 +7,7 @@ function App() {
   return (
     <div className="flex flex-col h-screen">
       <Header />
+      <LiveGraphs />
 
       {/* <a
         target="_blank"

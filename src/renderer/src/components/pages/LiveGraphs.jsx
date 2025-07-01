@@ -32,18 +32,18 @@ const LiveGraphs = () => {
     const timestamp = Date.now();
     const upload = Math.max(
       0,
-      Math.min(400, Math.random() * 150 + Math.sin(timestamp / 15000) * 80 + 50)
+      Math.min(450, Math.random() * 150 + Math.sin(timestamp / 15000) * 80 + 50)
     );
     const download = Math.max(
       0,
       Math.min(
-        400,
+        600,
         Math.random() * 200 + Math.sin(timestamp / 12000) * 100 + 80
       )
     );
     const total = Math.max(
       0,
-      Math.min(400, Math.random() * 180 + Math.sin(timestamp / 18000) * 90 + 60)
+      Math.min(500, Math.random() * 180 + Math.sin(timestamp / 18000) * 90 + 60)
     );
 
     return {
@@ -159,21 +159,21 @@ const LiveGraphs = () => {
 
   return (
     <div className="w-full h-screen bg-gradient-to-br from-[#242424] via-zinc-800 to-[#222222] text-white relative overflow-hidden">
-      <div className="relative z-10 py-6">
+      <div className="relative z-10 mt-4">
         {/* Header */}
-        <div className="w-[40%] mx-auto flex items-center justify-evenly mb-8">
-          <button className="relative group flex items-center gap-2 bg-stone-700 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-purple-600 transition">
+        <div className="w-[300px] mx-auto flex items-center justify-evenly mb-5 rounded-full overflow-hidden">
+          <div className="w-[33.33%] relative group flex items-center justify-center gap-2 bg-stone-700 text-white px-4 py-2.5 text-sm font-bold hover:bg-purple-600 transition">
             <Plus size={16} />
-            New
-          </button>
-          <button className="relative group flex items-center gap-2 bg-stone-700 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-purple-600 transition">
+            option
+          </div>
+          <div className="w-[33.33%] relative group flex items-center justify-center gap-2 bg-stone-700 text-white px-4 py-2.5 text-sm font-bold hover:bg-purple-600 transition">
             <Zap size={16} />
-            New
-          </button>
-          <button className="relative group flex items-center gap-2 bg-stone-700 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-purple-600 transition">
+            option
+          </div>
+          <div className="w-[33.33%] relative group flex items-center justify-center gap-2 bg-stone-700 text-white px-4 py-2.5 text-sm font-bold hover:bg-purple-600 transition">
             <Flame size={16} />
-            New
-          </button>
+            option
+          </div>
         </div>
 
         {/* Main Chart */}
@@ -183,7 +183,7 @@ const LiveGraphs = () => {
             <div className="flex items-center gap-4">
               {/* Legend */}
               <div className="flex items-center gap-4">
-                <button
+                <div
                   onClick={() => toggleLegendItem("upload")}
                   className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all ${
                     showLegend.upload
@@ -193,8 +193,8 @@ const LiveGraphs = () => {
                 >
                   <div className="w-3 h-3 bg-pink-500 rounded-full" />
                   <span className="text-sm">Upload</span>
-                </button>
-                <button
+                </div>
+                <div
                   onClick={() => toggleLegendItem("download")}
                   className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all ${
                     showLegend.download
@@ -204,8 +204,8 @@ const LiveGraphs = () => {
                 >
                   <div className="w-3 h-3 bg-blue-500 rounded-full" />
                   <span className="text-sm">Download</span>
-                </button>
-                <button
+                </div>
+                <div
                   onClick={() => toggleLegendItem("total")}
                   className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all ${
                     showLegend.total
@@ -215,32 +215,32 @@ const LiveGraphs = () => {
                 >
                   <div className="w-3 h-3 bg-purple-500 rounded-full" />
                   <span className="text-sm">Total</span>
-                </button>
+                </div>
               </div>
             </div>
 
             {/* Timeframe Controls */}
             <div className="flex items-center gap-2">
               <span className="text-sm text-purple-300">Timeframe:</span>
-              <button
+              <div
                 onClick={() => adjustTimeframe("decrease")}
                 className="p-1 bg-purple-700/50 hover:bg-purple-600/50 rounded transition-colors"
                 disabled={timeframe <= 30}
               >
                 <Minus className="w-4 h-4" />
-              </button>
+              </div>
               <span className="text-sm font-medium min-w-16 text-center">
                 {timeframe < 60
                   ? `${timeframe}s`
                   : `${Math.round(timeframe / 60)}m`}
               </span>
-              <button
+              <div
                 onClick={() => adjustTimeframe("increase")}
                 className="p-1 bg-purple-700/50 hover:bg-purple-600/50 rounded transition-colors"
                 disabled={timeframe >= 300}
               >
                 <Plus className="w-4 h-4" />
-              </button>
+              </div>
             </div>
           </div>
 
@@ -361,18 +361,73 @@ const LiveGraphs = () => {
         </div>
 
         {/* Timeline */}
-        <div className="relative px-6">
-          <div className="h-2 bg-purple-800 rounded-full overflow-hidden">
+        <div className="relative mb-4 mx-6">
+          <div className="h-1 bg-purple-800 rounded-full overflow-hidden">
             <div className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 rounded-full opacity-60" />
           </div>
-          <div className="flex justify-between mt-2 text-sm text-purple-300">
-            <span>12:40:40</span>
-            <span>12:42:00</span>
-            <span>12:43:20</span>
-            <span>12:44:40</span>
-          </div>
-          <div className="absolute left-0 top-0 w-4 h-4 bg-white rounded-full transform -translate-y-1" />
-          <div className="absolute right-0 top-0 w-4 h-4 bg-white rounded-full transform -translate-y-1" />
+          <div className="absolute left-0 top-0 w-3 h-3 bg-white rounded-full transform -translate-y-1" />
+          <div className="absolute right-0 top-0 w-3 h-3 bg-white rounded-full transform -translate-y-1" />
+        </div>
+
+        <div className="h-[6vh] mx-5 bg-[#181818]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data}>
+              <defs>
+                <linearGradient id="uploadGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#EC4899" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#EC4899" stopOpacity={0.2} />
+                </linearGradient>
+                <linearGradient
+                  id="downloadGradient"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.2} />
+                </linearGradient>
+                <linearGradient id="totalGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.6} />
+                  <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
+
+              {showLegend.total && (
+                <Area
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#8B5CF6"
+                  strokeWidth={2}
+                  fill="url(#totalGradient)"
+                  animationDuration={0}
+                  name="total"
+                />
+              )}
+              {showLegend.upload && (
+                <Area
+                  type="monotone"
+                  dataKey="upload"
+                  stroke="#EC4899"
+                  strokeWidth={2}
+                  fill="url(#uploadGradient)"
+                  animationDuration={0}
+                  name="upload"
+                />
+              )}
+              {showLegend.download && (
+                <Area
+                  type="monotone"
+                  dataKey="download"
+                  stroke="#3B82F6"
+                  strokeWidth={2}
+                  fill="url(#downloadGradient)"
+                  animationDuration={0}
+                  name="download"
+                />
+              )}
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

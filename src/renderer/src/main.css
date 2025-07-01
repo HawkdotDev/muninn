@@ -39,3 +39,7 @@ body {
 body::-webkit-scrollbar {
   display: none;              
 }
+
+.recharts-surface:focus {
+  outline: none;
+}

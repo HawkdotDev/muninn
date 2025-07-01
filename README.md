@@ -23,11 +23,17 @@ It helps you visualise active network connections, monitor traffic, and detect u
 ## Getting Started (Development)
 
 ```bash
-    git clone https://github.com/HawkdotDev/muninn.git
-    cd muninn
-    npm install
-    npm run dev
+git clone https://github.com/HawkdotDev/muninn.git
 ````
+```bash
+cd muninn
+```
+```bash
+npm install
+```
+```bash
+npm run dev
+```
 
 This will launch the app in development mode using Vite + Electron.
 
@@ -50,7 +56,7 @@ Muninn will query [GitHub Releases](https://github.com/HawkdotDev/muninn/release
 To build the app for distribution:
 
 ```bash
-    npm run build
+npm run build
 ```
 
 The build artifacts will be located in the `dist/` folder (renderer) and packaged via `electron-builder`.

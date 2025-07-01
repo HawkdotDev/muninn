@@ -1,7 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
-// import icon from "../../resources/icon.png";
 
 // Create the main window
 function createWindow() {
@@ -51,6 +50,8 @@ app.whenReady().then(() => {
 
   // Example IPC test
   ipcMain.on("ping", () => console.log("pong"));
+
+  // startNetworkMonitorWS(); // ← Start your network monitor server
 
   // Create the main window
   createWindow();

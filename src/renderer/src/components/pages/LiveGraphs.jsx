@@ -166,7 +166,7 @@ const LiveGraphs = () => {
             <Plus size={16} />
             option
           </div>
-          <div className="w-[33.33%] relative group flex items-center justify-center gap-2 bg-stone-700 text-white px-4 py-2.5 text-sm font-bold hover:bg-purple-600 transition">
+          <div className="w-[33.33%] relative group flex items-center justify-center border-x border-[#636363] gap-2 bg-stone-700 text-white px-4 py-2.5 text-sm font-bold hover:bg-purple-600 transition">
             <Zap size={16} />
             option
           </div>

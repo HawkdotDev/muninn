@@ -26,6 +26,9 @@ const LiveGraphs = () => {
     total: true,
   });
   const intervalRef = useRef(null);
+  const [isDragging, setIsDragging] = useState({ active: false, handle: null });
+  const [sliderRange, setSliderRange] = useState([0, 60]); // [start, end] in seconds from current time
+  const [allData, setAllData] = useState([]); // Store all data points
 
   // Generate realistic network data
   const generateDataPoint = () => {
@@ -157,6 +160,103 @@ const LiveGraphs = () => {
     }
   };
 
+  const adjustViewWindow = (direction) => {
+    if (direction === "increase") {
+      const newWindow = Math.min(timeframe, viewWindow + 30);
+      setViewWindow(newWindow);
+      // Auto-adjust slider range to show recent data
+      setSliderRange([0, newWindow]);
+    } else {
+      const newWindow = Math.max(30, viewWindow - 30);
+      setViewWindow(newWindow);
+      // Auto-adjust slider range to show recent data
+      setSliderRange([0, newWindow]);
+    }
+  };
+
+  // Handle slider interaction
+  const handleSliderClick = (e) => {
+    if (isDragging.active) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percentage = x / rect.width;
+    const position = percentage * timeframe;
+
+    // Update slider to center the view window around clicked position
+    const halfWindow = viewWindow / 2;
+    let start = Math.max(0, position - halfWindow);
+    let end = Math.min(timeframe, position + halfWindow);
+
+    // Adjust if we hit boundaries
+    if (end - start < viewWindow) {
+      if (start === 0) {
+        end = Math.min(timeframe, viewWindow);
+      } else {
+        start = Math.max(0, timeframe - viewWindow);
+      }
+    }
+
+    setSliderRange([start, end]);
+  };
+
+  // Handle dragging
+  const handleMouseDown = (e, handle) => {
+    e.stopPropagation();
+    setIsDragging({ active: true, handle });
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging.active) return;
+
+    const sliderElement = document.getElementById("timeline-slider");
+    if (!sliderElement) return;
+
+    const rect = sliderElement.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const percentage = x / rect.width;
+    const position = percentage * timeframe;
+
+    if (isDragging.handle === "start") {
+      const newStart = Math.max(0, Math.min(position, sliderRange[1] - 30)); // Min 30s window
+      setSliderRange([newStart, sliderRange[1]]);
+    } else if (isDragging.handle === "end") {
+      const newEnd = Math.min(
+        timeframe,
+        Math.max(position, sliderRange[0] + 30)
+      ); // Min 30s window
+      setSliderRange([sliderRange[0], newEnd]);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging({ active: false, handle: null });
+  };
+
+  // Add global mouse event listeners
+  useEffect(() => {
+    if (isDragging.active) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+
+      return () => {
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+      };
+    }
+  }, [isDragging, sliderRange, timeframe]);
+
+  // Calculate slider position for visual representation
+  const sliderLeftPercent = (sliderRange[0] / timeframe) * 100;
+  const sliderWidthPercent =
+    ((sliderRange[1] - sliderRange[0]) / timeframe) * 100;
+
+  const formatDuration = (seconds) => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+    return `${Math.round(seconds / 3600)}h`;
+  };
+
   return (
     <div className="w-full h-screen bg-gradient-to-br from-[#242424] via-zinc-800 to-[#222222] text-white relative overflow-hidden">
       <div className="relative z-10 mt-4">
@@ -176,7 +276,7 @@ const LiveGraphs = () => {
           </div>
         </div>
 
-        {/* Main Chart */}
+        {/* Main Graph */}
         <div className="relative mb-8">
           {/* Chart Controls */}
           <div className="flex items-center justify-between mb-6 px-6">
@@ -360,15 +460,56 @@ const LiveGraphs = () => {
           </div>
         </div>
 
-        {/* Timeline */}
+        {/* Slider for viewing range */}
         <div className="relative mb-4 mx-6">
-          <div className="h-1 bg-purple-800 rounded-full overflow-hidden">
-            <div className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 rounded-full opacity-60" />
+          <div className="mb-2 flex justify-between text-xs text-purple-300">
+            <span>
+              Viewing: {formatDuration(sliderRange[1] - sliderRange[0])}
+            </span>
+            <span>
+              Range: {formatDuration(sliderRange[0])} -{" "}
+              {formatDuration(sliderRange[1])} ago
+            </span>
+            <span>Total data: {allData.length} points</span>
           </div>
-          <div className="absolute left-0 top-0 w-3 h-3 bg-white rounded-full transform -translate-y-1" />
-          <div className="absolute right-0 top-0 w-3 h-3 bg-white rounded-full transform -translate-y-1" />
+
+          <div
+            id="timeline-slider"
+            className="relative h-1 bg-purple-800/50 rounded-full cursor-pointer select-none"
+            onClick={handleSliderClick}
+          >
+            {/* Background gradient */}
+            <div className="absolute inset-0 bg-gradient-to-r from-pink-500/30 via-purple-500/30 to-blue-500/30 rounded-full" />
+
+            {/* Selection window */}
+            <div
+              className="absolute top-0 h-full bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 rounded-full opacity-80 transition-all duration-75"
+              style={{
+                left: `${sliderLeftPercent}%`,
+                width: `${sliderWidthPercent}%`,
+              }}
+            />
+
+            {/* Start handle */}
+            <div
+              className="absolute top-1/2 w-5 h-5 bg-white rounded-full transform -translate-y-1/2 shadow-lg cursor-grab active:cursor-grabbing border-2 border-pink-400 hover:scale-110 transition-transform z-10"
+              style={{ left: `${sliderLeftPercent}%`, marginLeft: "-10px" }}
+              onMouseDown={(e) => handleMouseDown(e, "start")}
+            />
+
+            {/* End handle */}
+            <div
+              className="absolute top-1/2 w-5 h-5 bg-white rounded-full transform -translate-y-1/2 shadow-lg cursor-grab active:cursor-grabbing border-2 border-blue-400 hover:scale-110 transition-transform z-10"
+              style={{
+                left: `${sliderLeftPercent + sliderWidthPercent}%`,
+                marginLeft: "-10px",
+              }}
+              onMouseDown={(e) => handleMouseDown(e, "end")}
+            />
+          </div>
         </div>
 
+        {/* Full History Graph */}
         <div className="h-[6vh] mx-5 bg-[#181818]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>

@@ -1,5 +1,5 @@
 import Header from "./components/Header";
-import LiveGraphs from "./components/pages/LiveGraphs";
+import LiveGraphs from "./components/LiveGraphs";
 
 function App() {
   // const ipcHandle = () => window.electron.ipcRenderer.send("ping");

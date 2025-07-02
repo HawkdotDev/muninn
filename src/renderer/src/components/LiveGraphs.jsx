@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   AreaChart,
   Area,
@@ -12,13 +12,6 @@ import { Minus, Plus } from "lucide-react";
 
 const LiveGraphs = () => {
   const [data, setData] = useState([]);
-  const [uploadData, setUploadData] = useState(521.8);
-  const [downloadData, setDownloadData] = useState(235.4);
-  const [uploadSpeed, setUploadSpeed] = useState(1);
-  const [downloadSpeed, setDownloadSpeed] = useState(45);
-  const [wanData, setWanData] = useState(717.4);
-  const [lanData, setLanData] = useState(39.9);
-  const [totalData, setTotalData] = useState(757.2);
   const [timeframe, setTimeframe] = useState(60); // seconds
   const [showLegend, setShowLegend] = useState({
     upload: true,
@@ -28,10 +21,9 @@ const LiveGraphs = () => {
   const intervalRef = useRef(null);
   const [isDragging, setIsDragging] = useState({ active: false, handle: null });
   const [sliderRange, setSliderRange] = useState([0, 60]); // [start, end] in seconds from current time
-  const [allData, setAllData] = useState([]); // Store all data points
 
-  // Generate realistic network data
-  const generateDataPoint = () => {
+  // Memoized data generation function
+  const generateDataPoint = useCallback(() => {
     const timestamp = Date.now();
     const upload = Math.max(
       0,
@@ -55,19 +47,21 @@ const LiveGraphs = () => {
       download: Math.round(download * 10) / 10,
       total: Math.round(total * 10) / 10,
     };
-  };
+  }, []);
 
+  // Initialize data and start updates
   useEffect(() => {
     // Initialize with some data
     const initialData = [];
+    const now = Date.now();
 
     for (let i = 0; i < timeframe; i++) {
-      const timestamp = Date.now() - (timeframe - i) * 2000;
+      const timestamp = now - (timeframe - i) * 2000;
       initialData.push({
         time: timestamp,
-        upload: Math.random() * 150 + 50,
-        download: Math.random() * 200 + 80,
-        total: Math.random() * 180 + 60,
+        upload: Math.round((Math.random() * 150 + 50) * 10) / 10,
+        download: Math.round((Math.random() * 200 + 80) * 10) / 10,
+        total: Math.round((Math.random() * 180 + 60) * 10) / 10,
       });
     }
 
@@ -79,17 +73,6 @@ const LiveGraphs = () => {
         const newData = [...prevData, generateDataPoint()];
         return newData.slice(-timeframe);
       });
-
-      // Update stats occasionally
-      if (Math.random() > 0.8) {
-        setUploadData((prev) => prev + (Math.random() - 0.5) * 10);
-        setDownloadData((prev) => prev + (Math.random() - 0.5) * 8);
-        setUploadSpeed(Math.max(0, Math.random() * 5));
-        setDownloadSpeed(Math.max(0, Math.random() * 100));
-        setWanData((prev) => prev + (Math.random() - 0.5) * 15);
-        setLanData((prev) => prev + (Math.random() - 0.5) * 5);
-        setTotalData((prev) => prev + (Math.random() - 0.5) * 12);
-      }
     }, 2000);
 
     return () => {
@@ -97,9 +80,14 @@ const LiveGraphs = () => {
         clearInterval(intervalRef.current);
       }
     };
+  }, [timeframe, generateDataPoint]);
+
+  // Update slider range when timeframe changes
+  useEffect(() => {
+    setSliderRange([0, timeframe]);
   }, [timeframe]);
 
-  const formatTime = (timestamp) => {
+  const formatTime = useCallback((timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], {
       hour12: false,
@@ -107,133 +95,134 @@ const LiveGraphs = () => {
       minute: "2-digit",
       second: "2-digit",
     });
-  };
+  }, []);
 
-  const visibleData = data.slice(-timeframe);
-  const allYValues = visibleData
-    .flatMap((d) => [
-      showLegend.upload ? d.upload : null,
-      showLegend.download ? d.download : null,
-      showLegend.total ? d.total : null,
-    ])
-    .filter((v) => v !== null);
+  // Memoized calculations
+  const { referenceLevels, visibleData } = useMemo(() => {
+    const visible = data.slice(-timeframe);
+    const allYValues = visible
+      .flatMap((d) => [
+        showLegend.upload ? d.upload : null,
+        showLegend.download ? d.download : null,
+        showLegend.total ? d.total : null,
+      ])
+      .filter((v) => v !== null);
 
-  const maxY = Math.max(...allYValues, 50); // Ensure minimum reference range
-  const step = Math.ceil(maxY / 4); // 4 reference lines
-  const referenceLevels = [step, step * 2, step * 3, step * 4].filter(
-    (val) => val < maxY * 1.1 // slightly above max
+    const maxY = Math.max(...allYValues, 50);
+    const step = Math.ceil(maxY / 4);
+    const levels = [step, step * 2, step * 3, step * 4].filter(
+      (val) => val < maxY * 1.1
+    );
+
+    return { referenceLevels: levels, visibleData: visible };
+  }, [data, timeframe, showLegend]);
+
+  const CustomTooltip = useCallback(
+    ({ active, payload, label }) => {
+      if (!active || !payload || !payload.length) return null;
+
+      return (
+        <div className="bg-purple-900/90 backdrop-blur-sm border border-purple-500/50 rounded-lg px-4 py-3 shadow-xl">
+          <div className="text-purple-200 text-sm mb-2">
+            {formatTime(label)}
+          </div>
+          {payload.map((entry, index) => (
+            <div key={index} className="flex items-center gap-3 mb-1">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span className="text-white font-medium capitalize">
+                {entry.name}: {entry.value.toFixed(1)} KB/s
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    },
+    [formatTime]
   );
 
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload || !payload.length) return null;
-
-    return (
-      <div className="bg-purple-900/90 backdrop-blur-sm border border-purple-500/50 rounded-lg px-4 py-3 shadow-xl">
-        <div className="text-purple-200 text-sm mb-2">{formatTime(label)}</div>
-        {payload.map((entry, index) => (
-          <div key={index} className="flex items-center gap-3 mb-1">
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-white font-medium capitalize">
-              {entry.name}: {entry.value.toFixed(1)} KB/s
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const toggleLegendItem = (key) => {
+  const toggleLegendItem = useCallback((key) => {
     setShowLegend((prev) => ({
       ...prev,
       [key]: !prev[key],
     }));
-  };
+  }, []);
 
-  const adjustTimeframe = (direction) => {
+  const adjustTimeframe = useCallback((direction) => {
     if (direction === "increase") {
-      setTimeframe((prev) => Math.min(300, prev + 30)); // Max 5 minutes
+      setTimeframe((prev) => Math.min(300, prev + 30));
     } else {
-      setTimeframe((prev) => Math.max(30, prev - 30)); // Min 30 seconds
+      setTimeframe((prev) => Math.max(30, prev - 30));
     }
-  };
-
-  const adjustViewWindow = (direction) => {
-    if (direction === "increase") {
-      const newWindow = Math.min(timeframe, viewWindow + 30);
-      setViewWindow(newWindow);
-      // Auto-adjust slider range to show recent data
-      setSliderRange([0, newWindow]);
-    } else {
-      const newWindow = Math.max(30, viewWindow - 30);
-      setViewWindow(newWindow);
-      // Auto-adjust slider range to show recent data
-      setSliderRange([0, newWindow]);
-    }
-  };
+  }, []);
 
   // Handle slider interaction
-  const handleSliderClick = (e) => {
-    if (isDragging.active) return;
+  const handleSliderClick = useCallback(
+    (e) => {
+      if (isDragging.active) return;
 
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const percentage = x / rect.width;
-    const position = percentage * timeframe;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const percentage = x / rect.width;
+      const position = percentage * timeframe;
 
-    // Update slider to center the view window around clicked position
-    const halfWindow = viewWindow / 2;
-    let start = Math.max(0, position - halfWindow);
-    let end = Math.min(timeframe, position + halfWindow);
+      const viewWindow = sliderRange[1] - sliderRange[0];
+      const halfWindow = viewWindow / 2;
+      let start = Math.max(0, position - halfWindow);
+      let end = Math.min(timeframe, position + halfWindow);
 
-    // Adjust if we hit boundaries
-    if (end - start < viewWindow) {
-      if (start === 0) {
-        end = Math.min(timeframe, viewWindow);
-      } else {
-        start = Math.max(0, timeframe - viewWindow);
+      if (end - start < viewWindow) {
+        if (start === 0) {
+          end = Math.min(timeframe, viewWindow);
+        } else {
+          start = Math.max(0, timeframe - viewWindow);
+        }
       }
-    }
 
-    setSliderRange([start, end]);
-  };
+      setSliderRange([start, end]);
+    },
+    [isDragging.active, timeframe, sliderRange]
+  );
 
   // Handle dragging
-  const handleMouseDown = (e, handle) => {
+  const handleMouseDown = useCallback((e, handle) => {
     e.stopPropagation();
     setIsDragging({ active: true, handle });
-  };
+  }, []);
 
-  const handleMouseMove = (e) => {
-    if (!isDragging.active) return;
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (!isDragging.active) return;
 
-    const sliderElement = document.getElementById("timeline-slider");
-    if (!sliderElement) return;
+      const sliderElement = document.getElementById("timeline-slider");
+      if (!sliderElement) return;
 
-    const rect = sliderElement.getBoundingClientRect();
-    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
-    const percentage = x / rect.width;
-    const position = percentage * timeframe;
+      const rect = sliderElement.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const percentage = x / rect.width;
+      const position = percentage * timeframe;
 
-    if (isDragging.handle === "start") {
-      const newStart = Math.max(0, Math.min(position, sliderRange[1] - 30)); // Min 30s window
-      setSliderRange([newStart, sliderRange[1]]);
-    } else if (isDragging.handle === "end") {
-      const newEnd = Math.min(
-        timeframe,
-        Math.max(position, sliderRange[0] + 30)
-      ); // Min 30s window
-      setSliderRange([sliderRange[0], newEnd]);
-    }
-  };
+      if (isDragging.handle === "start") {
+        const newStart = Math.max(0, Math.min(position, sliderRange[1] - 30));
+        setSliderRange([newStart, sliderRange[1]]);
+      } else if (isDragging.handle === "end") {
+        const newEnd = Math.min(
+          timeframe,
+          Math.max(position, sliderRange[0] + 30)
+        );
+        setSliderRange([sliderRange[0], newEnd]);
+      }
+    },
+    [isDragging, sliderRange, timeframe]
+  );
 
-  const handleMouseUp = () => {
+  const handleMouseUp = useCallback(() => {
     setIsDragging({ active: false, handle: null });
-  };
+  }, []);
 
-  // Add global mouse event listeners
+  // Global mouse event listeners
   useEffect(() => {
     if (isDragging.active) {
       document.addEventListener("mousemove", handleMouseMove);
@@ -244,18 +233,32 @@ const LiveGraphs = () => {
         document.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [isDragging, sliderRange, timeframe]);
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  // Calculate slider position for visual representation
-  const sliderLeftPercent = (sliderRange[0] / timeframe) * 100;
-  const sliderWidthPercent =
-    ((sliderRange[1] - sliderRange[0]) / timeframe) * 100;
+  // Memoized slider calculations
+  const { sliderLeftPercent, sliderWidthPercent } = useMemo(
+    () => ({
+      sliderLeftPercent: (sliderRange[0] / timeframe) * 100,
+      sliderWidthPercent: ((sliderRange[1] - sliderRange[0]) / timeframe) * 100,
+    }),
+    [sliderRange, timeframe]
+  );
 
-  const formatDuration = (seconds) => {
+  const formatDuration = useCallback((seconds) => {
     if (seconds < 60) return `${seconds}s`;
     if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
     return `${Math.round(seconds / 3600)}h`;
-  };
+  }, []);
+
+  // Memoized tick values for better performance
+  const xAxisTicks = useMemo(() => {
+    if (data.length >= 10) {
+      return data
+        .filter((_, i) => i % Math.floor(data.length / 10) === 0)
+        .map((d) => d.time);
+    }
+    return data.map((d) => d.time);
+  }, [data]);
 
   return (
     <div className="w-full h-screen bg-gradient-to-br from-[#242424] via-zinc-800 to-[#222222] text-white relative overflow-hidden">
@@ -269,7 +272,7 @@ const LiveGraphs = () => {
               <div className="flex items-center gap-4">
                 <div
                   onClick={() => toggleLegendItem("upload")}
-                  className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all ${
+                  className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all cursor-pointer ${
                     showLegend.upload
                       ? "bg-pink-500/20 text-pink-300"
                       : "bg-gray-700/50 text-gray-500"
@@ -280,7 +283,7 @@ const LiveGraphs = () => {
                 </div>
                 <div
                   onClick={() => toggleLegendItem("download")}
-                  className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all ${
+                  className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all cursor-pointer ${
                     showLegend.download
                       ? "bg-blue-500/20 text-blue-300"
                       : "bg-gray-700/50 text-gray-500"
@@ -291,7 +294,7 @@ const LiveGraphs = () => {
                 </div>
                 <div
                   onClick={() => toggleLegendItem("total")}
-                  className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all ${
+                  className={`flex items-center gap-2 px-3 py-1 rounded-full transition-all cursor-pointer ${
                     showLegend.total
                       ? "bg-purple-500/20 text-purple-300"
                       : "bg-gray-700/50 text-gray-500"
@@ -306,25 +309,25 @@ const LiveGraphs = () => {
             {/* Timeframe Controls */}
             <div className="flex items-center gap-2">
               <span className="text-sm text-purple-300">Timeframe:</span>
-              <div
+              <button
                 onClick={() => adjustTimeframe("decrease")}
-                className="p-1 bg-purple-700/50 hover:bg-purple-600/50 rounded transition-colors"
+                className="p-1 bg-purple-700/50 hover:bg-purple-600/50 rounded transition-colors disabled:opacity-50"
                 disabled={timeframe <= 30}
               >
                 <Minus className="w-4 h-4" />
-              </div>
+              </button>
               <span className="text-sm font-medium min-w-16 text-center">
                 {timeframe < 60
                   ? `${timeframe}s`
                   : `${Math.round(timeframe / 60)}m`}
               </span>
-              <div
+              <button
                 onClick={() => adjustTimeframe("increase")}
-                className="p-1 bg-purple-700/50 hover:bg-purple-600/50 rounded transition-colors"
+                className="p-1 bg-purple-700/50 hover:bg-purple-600/50 rounded transition-colors disabled:opacity-50"
                 disabled={timeframe >= 300}
               >
                 <Plus className="w-4 h-4" />
-              </div>
+              </button>
             </div>
           </div>
 
@@ -372,15 +375,7 @@ const LiveGraphs = () => {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: "#C4B5FD", fontSize: 12 }}
-                  ticks={
-                    data.length >= 10
-                      ? data
-                          .filter(
-                            (_, i) => i % Math.floor(data.length / 10) === 0
-                          )
-                          .map((d) => d.time)
-                      : data.map((d) => d.time)
-                  }
+                  ticks={xAxisTicks}
                 />
 
                 <YAxis
@@ -391,8 +386,6 @@ const LiveGraphs = () => {
                   tick={{ fill: "#C4B5FD", fontSize: 12 }}
                   tickFormatter={(value) => `${value} KB/s`}
                 />
-
-                {/* Horizontal reference lines for speed benchmarks */}
 
                 {referenceLevels.map((y, idx) => (
                   <ReferenceLine
@@ -454,7 +447,7 @@ const LiveGraphs = () => {
               Range: {formatDuration(sliderRange[0])} -{" "}
               {formatDuration(sliderRange[1])} ago
             </span>
-            <span>Total data: {allData.length} points</span>
+            <span>Total data: {data.length} points</span>
           </div>
 
           <div
@@ -498,12 +491,18 @@ const LiveGraphs = () => {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
               <defs>
-                <linearGradient id="uploadGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient
+                  id="uploadGradient2"
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
                   <stop offset="5%" stopColor="#EC4899" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#EC4899" stopOpacity={0.2} />
                 </linearGradient>
                 <linearGradient
-                  id="downloadGradient"
+                  id="downloadGradient2"
                   x1="0"
                   y1="0"
                   x2="0"
@@ -512,7 +511,7 @@ const LiveGraphs = () => {
                   <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.2} />
                 </linearGradient>
-                <linearGradient id="totalGradient" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="totalGradient2" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.6} />
                   <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1} />
                 </linearGradient>
@@ -524,7 +523,7 @@ const LiveGraphs = () => {
                   dataKey="total"
                   stroke="#8B5CF6"
                   strokeWidth={2}
-                  fill="url(#totalGradient)"
+                  fill="url(#totalGradient2)"
                   animationDuration={0}
                   name="total"
                 />
@@ -535,7 +534,7 @@ const LiveGraphs = () => {
                   dataKey="upload"
                   stroke="#EC4899"
                   strokeWidth={2}
-                  fill="url(#uploadGradient)"
+                  fill="url(#uploadGradient2)"
                   animationDuration={0}
                   name="upload"
                 />
@@ -546,7 +545,7 @@ const LiveGraphs = () => {
                   dataKey="download"
                   stroke="#3B82F6"
                   strokeWidth={2}
-                  fill="url(#downloadGradient)"
+                  fill="url(#downloadGradient2)"
                   animationDuration={0}
                   name="download"
                 />
